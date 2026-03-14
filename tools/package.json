@@ -1,0 +1,16 @@
+{
+  "name": "opportunity-trackers",
+  "version": "1.0.0",
+  "description": "AI News, Job Radar, and GitHub Tools monitors",
+  "main": "index.js",
+  "scripts": {
+    "ai-trend": "node ai-trend-tracker.js",
+    "job-radar": "node job-opportunity-radar.js",
+    "github-tools": "node github-tools-monitor.js",
+    "all": "node ai-trend-tracker.js && node job-opportunity-radar.js && node github-tools-monitor.js"
+  },
+  "keywords": ["ai", "monitor", "tracker", "jobs", "github"],
+  "author": "Cool Vibe Coding",
+  "license": "MIT",
+  "dependencies": {}
+}

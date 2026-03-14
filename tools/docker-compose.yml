@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  trend-tracker:
+    build: .
+    container_name: cvb-trend-tracker
+    command: node ai-trend-tracker.js
+    env_file: .env
+    volumes:
+      - ./.state:/app/.state
+      - ${OBSIDIAN_DAILY_DIR}:/obsidian
+    restart: unless-stopped
+    
+  job-radar:
+    build: .
+    container_name: cvb-job-radar
+    command: node job-opportunity-radar.js
+    env_file: .env
+    volumes:
+      - ./.state:/app/.state
+      - ${OBSIDIAN_DAILY_DIR}:/obsidian
+    restart: unless-stopped
+    
+  github-monitor:
+    build: .
+    container_name: cvb-github-monitor
+    command: node github-tools-monitor.js
+    env_file: .env
+    volumes:
+      - ./.state:/app/.state
+      - ${OBSIDIAN_DAILY_DIR}:/obsidian
+    restart: unless-stopped
+    
+  # Run all tools in sequence
+  all-tools:
+    build: .
+    container_name: cvb-all-tools
+    env_file: .env
+    volumes:
+      - ./.state:/app/.state
+      - ${OBSIDIAN_DAILY_DIR}:/obsidian
+    profiles:
+      - manual
