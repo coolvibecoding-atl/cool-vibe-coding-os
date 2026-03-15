@@ -10,7 +10,19 @@
    - **Autonomous Execution:** BMAD must run AUTONOMOUSLY. Nova executes with best judgment.
    - Standard: "No BS, straight Heat, production-ready, Awwwards-inspiring Designs and Functions."
 
-3. **The Mission Interrogation Rule:**
+3. **The BMAD Subagent (Always On):**
+   - **Location:** `/agents/bmad-agent/SYSTEM.md`
+   - **How it works:** Every idea spawns the BMAD subagent first
+   - **Process:** Interrogation → Analyst → PM → UX → Architect → PO → Design
+   - **Output:** Full blueprint saved to `/plans/bmad-[project]-[date].md`
+   - **Gate:** Implementation ONLY after sign-off
+
+4. **Design Knowledge Base:**
+   - **Obsidian:** `~/Documents/Obsidian/Cool Vibe Coding OS`
+   - **Sources:** Awwwards, Figma Community, Behance, Dribbble, Mobbin, Landbook, Streamline, SiteInspire, Muzli, Pinterest
+   - **Standard:** Every project pulls from these for stunning, unique frontend
+
+4. **The Mission Interrogation Rule:**
    - Before moving forward with any idea, Nova MUST ask clarifying questions to tighten up the mission.
 
 4. **External Coding Agents:**
@@ -29,7 +41,70 @@
 - **Mobile-First:** All apps strictly mobile-first
 - **Agentic Backends:** All architectures must include AI/agentic behavior
 
-## System Status (Mar 11, 2026)
+## System Status (Mar 14, 2026)
+### Running Services
+| Service | Port | Status |
+|---------|------|--------|
+| SkillBoss API | - | ✅ Connected (96 AI capabilities) |
+| auth-vault | - | ✅ Built (secure credentials) |
+| notion-design skill | - | ✅ Complete (CLI ready) |
+| Notion Workspace | - | ✅ Live (HQ, Daily Reports, AI Research, Design Inspiration, Content Creation) |
+
+## 🔥 AI Tools & Services
+
+### Primary (In Use)
+- **SkillBoss** — Main AI gateway (https://skillboss.co)
+  - Direct API: POST https://api.heybossai.com/v1/run
+  - Auth: Bearer token
+  - Models: 26 chat, 14 image, 9 video, 4 music, 32 scraper
+  - Working for: images, chat, video, search
+  - ⚠️ Balance: ~$0.002 (needs top-up for heavy use)
+
+### 🎯 Daily Reports & Content Ideas (Scrapers)
+**Use these for automated daily briefings and content research:**
+| Tool | Model ID | Use Case |
+|------|----------|----------|
+| **Perplexity Search** | `perplexity/search` | AI-powered research with citations (PRIMARY) |
+| Google News | `scrapingdog/google_news` | Daily news, trends |
+| Google Trends | `scrapingdog/google_trends` | Trending topics |
+| Google Search | `scrapingdog/google_search` | Research, competitor intel |
+| YouTube | `scrapingdog/youtube_search_results` | Video content ideas |
+| X/Twitter | `scrapingdog/twitter_tweet_data` | Social trends |
+| Firecrawl | `firecrawl/scrape` | Deep content extraction |
+
+**Automation:** Integrate into morning-briefing.js for AI-powered daily intel
+**Default:** Use Perplexity for all briefings (best quality + citations)
+
+### Secondary (Backup/Exploring)
+- **inference.sh** — Agent runtime platform (https://app.inference.sh)
+  - Logged in as: coolvibecoding@gmail.com
+  - CLI: infsh (at ~/.local/bin/infsh)
+  - Focus: Deploying AI agents, durable execution
+  - NOT direct image generation - more of an agent infrastructure
+  - Status: Exploring capabilities
+
+### Design Assets
+- **Shoogle MCP** — shadcn/ui component search in Cursor
+
+### Shoogle MCP (shadcn/ui search)
+- **URL:** https://shoogle.dev/mcp-install
+- **Purpose:** Search shadcn/ui components directly from Cursor
+- **Setup:** Add to Cursor MCP settings:
+```json
+{
+  "mcpServers": {
+    "shoogle": {
+      "url": "https://mcp.shoogle.dev/mcp"
+    }
+  }
+}
+```
+- **Usage:** "Search for button components", "Find card layouts", "Show navigation bars"
+- **Use for:** All frontend design work - Awwwards-level UI components
+
+## 📊 Notion Workspace (Live)
+- Cool Vibe Coding HQ: https://www.notion.so/Cool-Vibe-Coding-HQ-323576027ec381cc8a7cd08072c44863
+- Daily Reports Hub, AI Research Hub, Design Inspiration, Content Creation
 ### Running Services
 | Service | Port | Status |
 |---------|------|--------|
