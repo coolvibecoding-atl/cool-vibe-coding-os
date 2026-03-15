@@ -1,0 +1,18 @@
+# Ignore large folders
+ai-mixer-pro/
+content-agency-pro/
+content-agency/
+content-refs/
+cool-vibe-coding/
+daily-summaries/
+frontend/
+ideas/
+infra/
+memory/
+node_modules/
+plans/
+scripts/
+*.log
+.env
+.env.*
+.DS_Store
