@@ -29,8 +29,24 @@
    - Use Claude Code, OpenCode, Codex CLI, Gemini CLI simultaneously for coding tasks.
 
 ## Active Projects
-- **Whats Up [City] Ecosystem** (Starting with Whats Up ATL 2026 App)
-- **AI Mixer Pro** - Audio AI SaaS (MVP ready, running on localhost:3000)
+- **SoDoATL 2026** — ⭐ TOP PRIORITY - World Cup 2026 + South Downtown Atlanta
+  - **Status:** 🟢 LIVE IN PRODUCTION
+  - **Source:** `/Users/coolvibecoding/Desktop/Projects/Dot/SoDoATL_Project_Clean`
+  - **Prod URL:** https://sodoatl.vercel.app
+  - **Vercel Project:** `sodoatl` (coolvibecoding-3642s-projects)
+  - **Tech:** Expo/React Native with Firebase
+  - **Firebase:** ✅ Configured (sodoatl project)
+    - Auth: Email/Password + Google
+    - Firestore: Enabled (test mode)
+    - Storage: Enabled
+  - **Google APIs:** ✅ Configured (sodoatl-community project)
+    - Places API
+    - Maps JavaScript API
+    - Geocoding API
+  - **Features:** Map, Events, Directory, Galleries, World Cup section
+  - **Last Deployed:** Mar 16, 2026 10:26 PM
+- **Whats Up [City] Ecosystem** — Secondary, pivot-ready version of SoDoATL concept
+- **AI Mixer Pro** - Audio AI SaaS
 
 ## Key Personnel
 - **DaWizKid (404kidwiz)** - 12 years IT/music industry
@@ -152,3 +168,160 @@ When DaWizKid or Dot Com say they're "calling it quits", "laying it down", "goin
 ## Heartbeat
 - **Configured:** HEARTBEAT.md with 15-minute checks
 - **Checks:** Dev server, Gateway, git status, messages, and daily report pipeline status
+
+---
+
+## 💡 IDEA-TO-EXECUTION PIPELINE (MANDATORY)
+
+### The Process (Effective March 15, 2026)
+
+**ALL ideas and apps MUST follow this workflow:**
+
+### Step 1: Intel Gathering
+- Run `mega-intel-scraper.js` to fetch from ALL sources:
+  - Perplexity (AI, startups, tools, crypto, robotics, health, enterprise, funding, trends, research)
+  - Hacker News
+  - Reddit (r/artificial, r/SaaS, r/indiehackers, r/MachineLearning, r/startups)
+  - Product Hunt
+  - X/Twitter
+  - YouTube
+  - Funding rounds
+
+### Step 2: Idea Generation
+- AI generates 10 wild money-making opportunities
+- Each idea includes: Why Now, 30-Day Build Plan, Revenue Model, First Users, Viral Loop, Tech Stack, Risks
+
+### Step 3: VALIDATION RESEARCH (NEW - Mandatory)
+**Before BMAD, validate each idea with deep research:**
+- Market size verification (TAM/SAM/SOM)
+- Competitor analysis (direct + indirect)
+- Recent funding in the space
+- Customer pain point validation
+- Technical feasibility check
+- Revenue model benchmarks
+- **Kill bad ideas early** - if validation fails, drop it
+
+**Validation Sources:**
+- Perplexity: "[Idea] market size 2026"
+- Crunchbase: Recent funding in space
+- G2/Capterra: Competitor reviews
+- Reddit/HN: "Is anyone building [X]?"
+- Twitter: What are users complaining about?
+
+**Output:** Validation score (1-10) for each idea
+**Gate:** Only ideas scoring 7+ proceed to BMAD
+Create folder at `~/clawd/opportunities/[idea-name]/` with:
+1. **prd.md** - Product Requirements Document
+   - Problem statement
+   - Target users
+   - Core features
+   - User stories
+   - Acceptance criteria
+   - Roadmap
+   - Pricing
+
+2. **implementation.md** - Technical Architecture
+   - System architecture diagram
+   - Database schema
+   - API endpoints
+   - LangChain agents
+   - File structure
+   - Deployment config
+   - Security measures
+
+3. **design.md** - UX/UI Specifications
+   - Design principles
+   - User flows
+   - Wireframes (ASCII)
+   - Component specs
+   - Interactions
+   - Responsive breakpoints
+   - Accessibility
+
+4. **branding.md** - Brand Identity
+   - Name options
+   - Tagline
+   - Color palette
+   - Typography
+   - Logo concepts
+   - Iconography
+   - Digital assets needed
+   - Brand voice
+
+### Step 4: Master Index
+- Update `~/clawd/opportunities/README.md`
+- Update Obsidian: `~/Documents/Obsidian/Daily/YYYY-MM-DD-Opportunity-Pipeline.md`
+- Update Memory: `~/memory/opportunities.md`
+
+### Step 5: Prioritization
+- **Phase 1 (Quick Wins):** Low barrier, fast revenue
+- **Phase 2 (High Impact):** Proven models, scaling
+- **Phase 3 (Moonshots):** Complex, high reward
+
+### Step 6: Pick ONE & Build
+- Select from Phase 1
+- Set up repo
+- Sprint 1-2 (Weeks 1-4)
+- Ship MVP in 30 days
+
+### Tech Stack (Standard)
+**Frontend:** Next.js 15 • React 19 • TypeScript • Tailwind CSS • shadcn/ui  
+**Backend:** Supabase • Vercel AI SDK • FastAPI (Python)  
+**AI:** Claude 4 • GPT-5-mini • Gemini 2.5 Flash • LangChain  
+**Data:** Pinecone • Supabase • PostgreSQL
+
+### File Locations
+```
+~/clawd/opportunities/
+├── README.md (master index)
+├── [idea-name]/
+│   ├── prd.md
+│   ├── implementation.md
+│   ├── design.md
+│   └── branding.md
+```
+
+**This process is NON-NEGOTIABLE for all future ideas.**
+
+---
+
+## 🔄 AUTOMATED PIPELINE SCHEDULE
+
+**Runs Every Other Day (Mon, Wed, Fri) at 7:00 AM**
+
+**Automated Tasks:**
+1. ✅ Intel Gathering - Fetch from 12+ sources
+2. ✅ Idea Generation - 10 wild opportunities
+3. ✅ Validation Research - Market/competitor/pain points
+4. ✅ Save to Obsidian + Memory
+
+**Logs:** `/tmp/idea-pipeline.log`
+**LaunchAgent:** `com.coolvibecoding.idea-pipeline.plist`
+
+**Manual Run:**
+```bash
+cd ~/.openclaw/workspace/scripts
+node mega-intel-scraper.js
+```
+
+---
+
+## Current Opportunity Pipeline
+
+### Phase 1 (Build First)
+1. **Patent Agent (Stilta)** - $600K-$2M ARR - AI patent drafting
+2. **CloudSage** - $4M ARR - Cloud cost optimization
+3. **DeepBrief** - $5M+ ARR - Research agents
+
+### Phase 2 (High Impact)
+4. **TreasuryPilot** - $1.45M ARR - DAO treasury management
+5. **DevinWorks** - $594K ARR - DevOps automation
+6. **Persona Studio** - $250K/mo - AI character factory
+
+### Phase 3 (Moonshots)
+7. **Tangent** - $3M ARR - Robot fleet orchestration
+8. **SimLab** - $9M/yr - Biotech lab automation
+9. **AgentSwap** - $300K+ - NFT agent marketplace
+10. **AgentShield** - $1-3M ARR - Agent security suite
+
+**Total Potential Revenue: $18M+ ARR**

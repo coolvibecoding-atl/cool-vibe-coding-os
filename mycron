@@ -1,0 +1,14 @@
+# Cool Vibe Coding - Daily Cron Jobs
+
+# Auto-update (4:00 AM daily)
+0 4 * * * /Users/coolvibecoding/Desktop/agentic-devbox-setup/scripts/auto-update.sh >> /tmp/auto-update.log 2>&1
+
+# Backup to GitHub (4:30 AM daily)
+30 4 * * * /Users/coolvibecoding/Desktop/agentic-devbox-setup/scripts/backup.sh >> /tmp/backup.log 2>&1
+0 7 * * * /Users/coolvibecoding/.nvm/versions/node/v22.22.0/bin/node /Users/coolvibecoding/.openclaw/workspace/scripts/skillboss-briefing.js >> /tmp/morning-briefing.log 2>&1
+# Cool Vibe Coding - Content Agency
+0 9 * * 1 cd /Users/coolvibecoding/.openclaw/workspace/content-agency && /usr/local/bin/node generate.js >> /tmp/cvc-content.log 2>&1
+
+0 9 * * 1 cd /Users/coolvibecoding/.openclaw/workspace/content-agency && /usr/local/bin/node generate.js >> /tmp/cvc-content.log 2>&1
+# CVC Content Agent — autonomous weekly generation
+0 9 * * 1 /usr/local/bin/node /Users/coolvibecoding/.openclaw/agents/content-agent/agent/agent.js --run >> /tmp/cvc-content-agent.log 2>&1

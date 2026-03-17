@@ -114,6 +114,20 @@ function writeState(patch) {
 
 function withLock(fn) {
   ensureStateDir();
+  
+  // Check for stale lock file (older than 30 minutes)
+  try {
+    const stat = fs.statSync(LOCK_FILE);
+    const lockAge = Date.now() - stat.mtimeMs;
+    const MAX_LOCK_AGE = 30 * 60 * 1000; // 30 minutes
+    if (lockAge > MAX_LOCK_AGE) {
+      log(`⚠️ Removing stale lock file (${Math.round(lockAge/60000)} minutes old)`);
+      fs.unlinkSync(LOCK_FILE);
+    }
+  } catch {
+    // Lock file doesn't exist, that's fine
+  }
+  
   try {
     const fd = fs.openSync(LOCK_FILE, 'wx');
     fs.closeSync(fd);
@@ -234,6 +248,53 @@ async function sendTelegramMessage(text) {
   });
 }
 
+// HTML version for clickable links
+async function sendTelegramMessageHTML(text) {
+  if (!CONFIG.telegram.botToken || !CONFIG.telegram.chatId) {
+    log('⚠️ Telegram credentials unavailable; skipping Telegram delivery');
+    return { ok: false, skipped: true, reason: 'missing_credentials' };
+  }
+
+  const payload = JSON.stringify({
+    chat_id: CONFIG.telegram.chatId,
+    text,
+    parse_mode: 'HTML',
+    disable_web_page_preview: false
+  });
+
+  return new Promise((resolve) => {
+    const req = https.request({
+      hostname: 'api.telegram.org',
+      path: `/bot${CONFIG.telegram.botToken}/sendMessage`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload)
+      }
+    }, (res) => {
+      let response = '';
+      res.on('data', chunk => { response += chunk; });
+      res.on('end', () => {
+        if (res.statusCode === 200) {
+          log('✅ Telegram HTML message sent');
+          resolve({ ok: true });
+        } else {
+          log(`❌ Telegram HTML send failed: ${res.statusCode} ${response.slice(0,200)}`);
+          resolve({ ok: false, statusCode: res.statusCode, body: response.slice(0, 500) });
+        }
+      });
+    });
+
+    req.on('error', (err) => {
+      log(`❌ Telegram request error: ${err.message}`);
+      resolve({ ok: false, error: err.message });
+    });
+
+    req.write(payload);
+    req.end();
+  });
+}
+
 async function errorAlert(msg) {
   log(`🚨 ALERT: ${msg}`);
   writeState({
@@ -285,7 +346,8 @@ async function fetchTwitterTimeline() {
     log(`✅ Twitter: ${scored.length} relevant items`);
     return scored;
   } catch (err) {
-    await errorAlert(`Twitter fetch failed: ${err.message}`);
+    // Log Twitter failures silently - don't spam Telegram for non-critical source failures
+    log(`⚠️ Twitter fetch failed (non-critical): ${err.message}`);
     return [];
   }
 }
@@ -598,17 +660,46 @@ async function generateBriefing({ force = false } = {}) {
     log(`📹 Appended ${videoItems.length} video ideas`);
   }
 
-  const telegramMsg = [
-    `🌅 *Morning Briefing - ${escapeTelegramMarkdown(dateStr)}*`,
+  // Build detailed Telegram message with clickable links
+  const topForTelegram = topItems.slice(0, 12);
+  const telegramLines = [
+    `🌅 <b>Morning Briefing - ${dateStr}</b>`,
     '',
-    `📰 Top Stories: *${topItems.length}*`,
-    `🎬 Video Ideas: *${videoItems.length}*`,
-    `📊 Sources: ${escapeTelegramMarkdown(Object.keys(bySource).join(', ') || 'none')}`,
+    `📰 <b>${topItems.length} Stories</b> from ${Object.keys(bySource).length} sources`,
     '',
-    '_Full briefing saved to Obsidian._'
-  ].join('\n');
+    '<b>━━━━ TOP STORIES ━━━━</b>',
+    ''
+  ];
 
-  const telegramResult = await sendTelegramMessage(telegramMsg);
+  topForTelegram.forEach((item, idx) => {
+    const title = (item.title || item.text || 'Untitled').replace(/</g, '&lt;').replace(/>/g, '&gt;').slice(0, 80);
+    const source = item.source || 'Unknown';
+    const score = item.score || 0;
+    telegramLines.push(`<b>${idx + 1}.</b> <a href="${item.url}">${title}</a>`);
+    telegramLines.push(`   <i>${source}</i> • Score: ${score}`);
+    telegramLines.push('');
+  });
+
+  if (videoItems.length > 0) {
+    telegramLines.push('<b>━━━━ VIDEO IDEAS ━━━━</b>');
+    telegramLines.push('');
+    videoItems.slice(0, 5).forEach((item, idx) => {
+      const title = (item.title || item.text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').slice(0, 70);
+      telegramLines.push(`<b>${idx + 1}.</b> <a href="${item.url}">${title}</a>`);
+    });
+    telegramLines.push('');
+  }
+
+  telegramLines.push('<b>━━━━━━━━━━━━━━━━━━━━</b>');
+  telegramLines.push('');
+  telegramLines.push(`<b>Sources:</b> ${Object.entries(bySource).map(([s, c]) => `${s} (${c})`).join(' • ')}`);
+  telegramLines.push('');
+  telegramLines.push(`<i>💾 Full report: Obsidian/Daily/${filename}</i>`);
+
+  const telegramMsg = telegramLines.join('\n');
+
+  // Send with HTML parse mode for clickable links
+  const telegramResult = await sendTelegramMessageHTML(telegramMsg);
   const notionResult = await createNotionPage(`Morning Briefing - ${dateStr}`, markdown);
 
   const nextState = writeState({

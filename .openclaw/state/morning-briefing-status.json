@@ -1,0 +1,25 @@
+{
+  "today": "2026-03-17",
+  "startedAt": "2026-03-17T05:08:00.126Z",
+  "ok": true,
+  "telegramDelivered": true,
+  "lastError": null,
+  "lastErrorAt": null,
+  "updatedAt": "2026-03-17T05:08:12.213Z",
+  "completedAt": "2026-03-17T05:08:12.213Z",
+  "briefingPath": "/Users/coolvibecoding/Documents/Obsidian/Daily/2026-03-17-briefing.md",
+  "itemsCount": 25,
+  "videoIdeasCount": 8,
+  "telegramLastAttemptAt": "2026-03-17T05:08:12.213Z",
+  "notionCreated": false,
+  "sources": {
+    "RSS": 18,
+    "Reddit": 5,
+    "Hacker News": 2
+  },
+  "runMode": "scheduled_or_manual",
+  "lastHeartbeatAlertKey": "2026-03-17:morning briefing missing Telegram send after 8:00 AM",
+  "lastHeartbeatAlertAt": "2026-03-17T00:36:21.569Z",
+  "heartbeatAlertSent": true,
+  "note": "New day - morning briefing will run at 7:00 AM"
+}

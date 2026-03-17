@@ -1,243 +1,282 @@
 #!/usr/bin/env node
 /**
  * GitHub New Tools Monitor
- * Tracks new AI/LLM repositories and trending tools
- * Identifies emerging frameworks and SDKs
+ * Tracks new repositories tagged with AI, LLM, agents, etc.
+ * Focuses on tools, frameworks, SDKs - not tutorials
  */
 
 const fs = require('fs');
 const path = require('path');
-const axios = require('axios');
-require('dotenv').config({ path: path.join(__dirname, '.env') });
+const https = require('https');
 
-const CONFIG = {
-  obsidianDir: process.env.OBSIDIAN_DAILY_DIR,
-  notionKey: process.env.NOTION_API_KEY,
-  telegramToken: process.env.TELEGRAM_BOT_TOKEN,
-  telegramChat: process.env.TELEGRAM_CHAT_ID,
-  stateFile: path.join(__dirname, '.state', 'github-monitor.json'),
-  githubToken: process.env.GITHUB_TOKEN
-};
-
-const TOPICS = ['ai', 'llm', 'agents', 'openai', 'anthropic', 'langchain', 'llama', 'gpt', 'claude'];
-
-// State management
-function loadState() {
-  try {
-    return JSON.parse(fs.readFileSync(CONFIG.stateFile, 'utf8'));
-  } catch {
-    return { lastRun: null, seenRepos: [], trending: [] };
-  }
-}
-
-function saveState(state) {
-  fs.mkdirSync(path.dirname(CONFIG.stateFile), { recursive: true });
-  fs.writeFileSync(CONFIG.stateFile, JSON.stringify(state, null, 2));
-}
-
-// GitHub API with auth
-async function githubAPI(endpoint) {
-  const headers = {
-    'User-Agent': 'CVB-GitHubBot/1.0',
-    'Accept': 'application/vnd.github.v3+json'
-  };
-  if (CONFIG.githubToken) {
-    headers['Authorization'] = `token ${CONFIG.githubToken}`;
-  }
-  
-  try {
-    const response = await axios.get(`https://api.github.com${endpoint}`, { headers });
-    return response.data;
-  } catch (error) {
-    console.error(`GitHub API error (${endpoint}):`, error.message);
-    return null;
-  }
-}
-
-// Search new repos by topic
-async function searchNewRepos(topic) {
-  const oneWeekAgo = new Date();
-  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-  const dateStr = oneWeekAgo.toISOString().split('T')[0];
-  
-  const data = await githubAPI(`/search/repositories?q=topic:${topic}+created:>${dateStr}&sort=stars&order=desc&per_page=10`);
-  
-  if (!data || !data.items) return [];
-  
-  return data.items.map(repo => ({
-    id: repo.full_name,
-    name: repo.name,
-    fullName: repo.full_name,
-    description: repo.description || 'No description',
-    url: repo.html_url,
-    stars: repo.stargazers_count,
-    language: repo.language,
-    topics: repo.topics || [],
-    created: repo.created_at,
-    updated: repo.updated_at,
-    topic
-  }));
-}
-
-// Get trending repos (starred recently)
-async function getTrendingRepos() {
-  const data = await githubAPI('/search/repositories?q=stars:>100+pushed:>2024-01-01&sort=stars&order=desc&per_page=20');
-  
-  if (!data || !data.items) return [];
-  
-  // Filter for AI-related
-  return data.items
-    .filter(repo => {
-      const text = `${repo.name} ${repo.description || ''} ${(repo.topics || []).join(' ')}`.toLowerCase();
-      return TOPICS.some(t => text.includes(t.toLowerCase()));
-    })
-    .map(repo => ({
-      id: repo.full_name,
-      name: repo.name,
-      fullName: repo.full_name,
-      description: repo.description || 'No description',
-      url: repo.html_url,
-      stars: repo.stargazers_count,
-      language: repo.language,
-      topics: repo.topics || [],
-      trending: true
-    }));
-}
-
-// Filter tools (not tutorials/examples)
-function filterTools(repos) {
-  const tutorialKeywords = ['tutorial', 'example', 'course', 'learn', 'awesome-list', 'curated'];
-  
-  return repos.filter(repo => {
-    const text = `${repo.name} ${repo.description}`.toLowerCase();
-    return !tutorialKeywords.some(kw => text.includes(kw.toLowerCase()));
+// Load .env if exists
+const envPath = path.join(__dirname, '.env');
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf8');
+  envContent.split('\n').forEach(line => {
+    const match = line.match(/^([^=]+)=(.*)$/);
+    if (match) process.env[match[1].trim()] = match[2].trim();
   });
 }
 
-// Categorize repos
-function categorizeRepo(repo) {
-  const text = `${repo.name} ${repo.description} ${repo.topics.join(' ')}`.toLowerCase();
+// Configuration
+const CONFIG = {
+  obsidianPath: process.env.OBSIDIAN_PATH || '/Users/coolvibecoding/Documents/Obsidian/Daily',
+  notionApiKey: process.env.NOTION_API_KEY,
+  notionDatabaseId: process.env.NOTION_DATABASE_ID,
+  stateFile: path.join(__dirname, 'state', 'github-tools-state.json'),
+  tags: ['ai', 'llm', 'agents', 'openai', 'anthropic', 'gpt', 'rag', 'fine-tuning'],
+  maxRepos: 10,
+  excludeWords: ['tutorial', 'example', 'learn', 'course', 'demo', 'blog', 'doc', 'scratch']
+};
+
+// Ensure state directory
+const stateDir = path.dirname(CONFIG.stateFile);
+if (!fs.existsSync(stateDir)) {
+  fs.mkdirSync(stateDir, { recursive: true });
+}
+
+// Load state
+function loadState() {
+  try {
+    if (fs.existsSync(CONFIG.stateFile)) {
+      return JSON.parse(fs.readFileSync(CONFIG.stateFile, 'utf8'));
+    }
+  } catch (e) {
+    console.error('Error loading state:', e.message);
+  }
+  return { seenRepos: new Set(), lastRun: null, trending: [] };
+}
+
+// Save state
+function saveState(state) {
+  fs.writeFileSync(CONFIG.stateFile, JSON.stringify(state, null, 2));
+}
+
+// Rate limiting
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// GitHub API fetch
+async function githubFetch(endpoint, delayMs = 1500) {
+  await delay(delayMs);
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: 'api.github.com',
+      path: endpoint,
+      method: 'GET',
+      headers: {
+        'User-Agent': 'GitHub-Tools-Monitor/1.0',
+        'Accept': 'application/vnd.github.v3+json'
+      },
+      timeout: 15000
+    };
+    
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          resolve(JSON.parse(data));
+        } catch (e) {
+          reject(new Error('Invalid JSON response'));
+        }
+      });
+    });
+    req.on('error', reject);
+    req.setTimeout(15000, () => req.destroy());
+    req.end();
+  });
+}
+
+// Get date N months ago
+function getDateMonthsAgo(months) {
+  const date = new Date();
+  date.setMonth(date.getMonth() - months);
+  return date.toISOString().split('T')[0];
+}
+
+// Search GitHub repos by topic
+async function searchByTopic(topic) {
+  console.log(`Searching GitHub for topic: ${topic}...`);
+  try {
+    const query = encodeURIComponent(`topic:${topic} stars:>5 created:>${getDateMonthsAgo(3)}`);
+    const data = await githubFetch(`/search/repositories?q=${query}&sort=stars&order=desc&per_page=20`, 2000);
+    
+    return (data.items || []).map(repo => ({
+      name: repo.full_name,
+      description: repo.description,
+      stars: repo.stargazers_count,
+      forks: repo.forks_count,
+      url: repo.html_url,
+      language: repo.language,
+      topics: repo.topics,
+      created: repo.created_at,
+      updated: repo.updated_at
+    }));
+  } catch (e) {
+    console.error(`GitHub API error for ${topic}:`, e.message);
+    return [];
+  }
+}
+
+// Filter out tutorials and non-tools
+function filterTools(repos) {
+  return repos.filter(repo => {
+    const text = (repo.name + ' ' + (repo.description || '') + ' ' + (repo.topics || []).join(' ')).toLowerCase();
+    return !CONFIG.excludeWords.some(w => text.includes(w));
+  });
+}
+
+// Analyze trends
+function analyzeTrends(repos) {
+  const languageCounts = {};
+  const topicCounts = {};
+  const avgStars = repos.reduce((sum, r) => sum + r.stars, 0) / repos.length;
   
-  if (text.includes('framework') || text.includes('sdk')) return 'Framework/SDK';
-  if (text.includes('library') || text.includes('package')) return 'Library';
-  if (text.includes('tool') || text.includes('cli')) return 'Tool/CLI';
-  if (text.includes('model') || text.includes('checkpoint')) return 'Model/Weights';
-  if (text.includes('app') || text.includes('application')) return 'Application';
-  return 'Other';
+  repos.forEach(repo => {
+    if (repo.language) languageCounts[repo.language] = (languageCounts[repo.language] || 0) + 1;
+    (repo.topics || []).forEach(t => {
+      topicCounts[t] = (topicCounts[t] || 0) + 1;
+    });
+  });
+  
+  return {
+    topLanguages: Object.entries(languageCounts).sort((a, b) => b[1] - a[1]).slice(0, 5),
+    topTopics: Object.entries(topicCounts).sort((a, b) => b[1] - a[1]).slice(0, 5),
+    avgStars: Math.round(avgStars),
+    totalRepos: repos.length
+  };
 }
 
 // Write to Obsidian
-function writeToObsidian(newRepos, trending) {
+async function writeToObsidian(toolsData) {
   const today = new Date().toISOString().split('T')[0];
-  const filename = path.join(CONFIG.obsidianDir, `${today}.md`);
+  const filename = path.join(CONFIG.obsidianPath, `${today}.md`);
   
-  let content = `\n\n## 🛠️ GitHub Tools Monitor - ${today}\n\n`;
-  content += `*Tracked: ${new Date().toLocaleString()}*\n\n`;
+  const analysis = toolsData.analysis;
+  const repos = toolsData.repos;
   
-  // New discoveries
-  if (newRepos.length > 0) {
-    content += `### 🆕 New AI/LLM Tools\n\n`;
-    
-    const byCategory = {};
-    newRepos.forEach(repo => {
-      const cat = categorizeRepo(repo);
-      if (!byCategory[cat]) byCategory[cat] = [];
-      byCategory[cat].push(repo);
-    });
-    
-    Object.entries(byCategory).forEach(([cat, repos]) => {
-      content += `#### ${cat}\n\n`;
-      repos.forEach(repo => {
-        content += `- **${repo.name}** ([${repo.fullName}](${repo.url}))\n`;
-        content += `  ${repo.description.slice(0, 100)}${repo.description.length > 100 ? '...' : ''}\n`;
-        content += `  ⭐ ${repo.stars} | ${repo.language || 'N/A'} | Topic: ${repo.topic}\n\n`;
-      });
-    });
+  const content = `# GitHub AI Tools - ${today}
+
+## Top New Tools
+
+${repos.slice(0, 10).map((r, i) => `${i + 1}. **${r.name}** ⭐ ${r.stars} - ${r.description || 'No description'}`).join('\n')}
+
+## Technology Trends
+
+**Languages:** ${analysis.topLanguages.map(([l, c]) => `${l} (${c})`).join(', ')}
+
+**Topics:** ${analysis.topTopics.map(([t, c]) => `${t} (${c})`).join(', ')}
+
+## Stats
+
+- Average stars: ${analysis.avgStars}
+- Total new tools: ${analysis.totalRepos}
+
+---
+*Generated by GitHub Tools Monitor*
+`;
+
+  if (!fs.existsSync(CONFIG.obsidianPath)) {
+    fs.mkdirSync(CONFIG.obsidianPath, { recursive: true });
   }
   
-  // Trending
-  if (trending.length > 0) {
-    content += `### 🔥 Trending AI Tools\n\n`;
-    trending.slice(0, 5).forEach(repo => {
-      content += `- **${repo.name}** ([${repo.fullName}](${repo.url})) - ⭐ ${repo.stars}\n`;
-    });
-    content += '\n';
-  }
-  
-  fs.mkdirSync(CONFIG.obsidianDir, { recursive: true });
-  
+  let existingContent = '';
   if (fs.existsSync(filename)) {
-    fs.appendFileSync(filename, content);
-  } else {
-    fs.writeFileSync(filename, `# Daily Notes - ${today}\n\n${content}`);
+    existingContent = fs.readFileSync(filename, 'utf8');
   }
   
-  console.log(`✅ Written to Obsidian: ${filename}`);
+  fs.writeFileSync(filename, existingContent + '\n\n' + content);
+  console.log(`Wrote to Obsidian: ${filename}`);
 }
 
-// Telegram alert
-async function sendTelegram(message) {
-  if (!CONFIG.telegramToken || !CONFIG.telegramChat) return;
-  
-  const chatId = CONFIG.telegramChat.replace('telegram:', '');
-  const url = `https://api.telegram.org/bot${CONFIG.telegramToken}/sendMessage`;
-  
-  try {
-    await axios.post(url, {
-      chat_id: chatId,
-      text: message,
-      parse_mode: 'Markdown'
-    });
-  } catch (e) {
-    console.error('Telegram failed:', e.message);
+// Write to Notion
+async function writeToNotion(toolsData) {
+  if (!CONFIG.notionApiKey || !CONFIG.notionDatabaseId) {
+    console.log('Notion credentials not configured, skipping...');
+    return;
   }
+  
+  const state = loadState();
+  
+  for (const repo of toolsData.repos) {
+    if (state.seenRepos.has(repo.url)) continue;
+    
+    try {
+      const response = await fetch('https://api.notion.com/v1/pages', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${CONFIG.notionApiKey}`,
+          'Content-Type': 'application/json',
+          'Notion-Version': '2022-06-28'
+        },
+        body: JSON.stringify({
+          parent: { database_id: CONFIG.notionDatabaseId },
+          properties: {
+            Name: { title: [{ text: { content: repo.name } }] },
+            Description: { rich_text: [{ text: { content: repo.description || '' } }] },
+            Stars: { number: repo.stars },
+            Language: { rich_text: [{ text: { content: repo.language || 'N/A' } }] },
+            URL: { url: repo.url },
+            Type: { select: { name: 'GitHub Tool' } },
+            Date: { date: { start: new Date().toISOString().split('T')[0] } }
+          }
+        })
+      });
+      
+      if (response.ok) state.seenRepos.add(repo.url);
+      await delay(500);
+    } catch (e) {
+      console.error('Notion write error:', e.message);
+    }
+  }
+  
+  saveState(state);
 }
 
 // Main
 async function main() {
-  console.log('🛠️ Starting GitHub Tools Monitor...');
+  console.log('=== GitHub Tools Monitor Starting ===');
   
   const state = loadState();
-  const allNewRepos = [];
+  state.lastRun = new Date().toISOString();
   
-  // Search each topic
-  for (const topic of TOPICS) {
-    console.log(`🔍 Searching topic: ${topic}...`);
-    const repos = await searchNewRepos(topic);
-    allNewRepos.push(...repos);
-    
-    // Rate limit protection
-    await new Promise(r => setTimeout(r, 1000));
+  // Search multiple topics
+  const allRepos = [];
+  for (const tag of CONFIG.tags) {
+    const repos = await searchByTopic(tag);
+    allRepos.push(...repos);
   }
   
-  // Filter new repos only
-  const newRepos = allNewRepos.filter(r => !state.seenRepos.includes(r.id));
-  const filteredRepos = filterTools(newRepos);
+  // Deduplicate
+  const uniqueRepos = [];
+  const seen = new Set();
+  allRepos.forEach(repo => {
+    if (!seen.has(repo.url)) {
+      seen.add(repo.url);
+      uniqueRepos.push(repo);
+    }
+  });
   
-  // Get trending
-  const trending = await getTrendingRepos();
+  const filteredRepos = filterTools(uniqueRepos)
+    .sort((a, b) => b.stars - a.stars)
+    .slice(0, CONFIG.maxRepos);
   
-  console.log(`📊 Found ${filteredRepos.length} new tools (${newRepos.length - filteredRepos.length} filtered as tutorials)`);
+  const analysis = analyzeTrends(filteredRepos);
+  const toolsData = { repos: filteredRepos, analysis };
   
-  if (filteredRepos.length > 0 || trending.length > 0) {
-    writeToObsidian(filteredRepos, trending);
-    
-    state.seenRepos.push(...newRepos.map(r => r.id));
-    state.trending = trending.map(r => r.id);
-    state.lastRun = new Date().toISOString();
-    saveState(state);
-    
-    const summary = `🛠️ *GitHub Tools Update*\n\nFound ${filteredRepos.length} new AI/LLM tools\n🔥 ${trending.length} trending repos`;
-    await sendTelegram(summary);
-  } else {
-    console.log('📭 No new tools found');
-  }
+  console.log('\n--- TOOLS JSON ---\n');
+  console.log(JSON.stringify(toolsData, null, 2));
   
-  console.log('✅ Complete');
+  await Promise.all([
+    writeToObsidian(toolsData),
+    writeToNotion(toolsData)
+  ]);
+  
+  saveState(state);
+  console.log('\n=== GitHub Tools Monitor Complete ===');
 }
 
-main().catch(async (err) => {
-  console.error('❌ Error:', err);
-  await sendTelegram(`🚨 GitHub Monitor Error: ${err.message}`);
-  process.exit(1);
-});
+main().catch(console.error);

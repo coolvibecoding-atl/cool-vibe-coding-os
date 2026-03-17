@@ -39,8 +39,8 @@ Things like:
 
 ### Current Model Configuration
 
-- **Primary Model:** Google Gemini 3.1 Pro (google/gemini-3.1-pro-preview)
-- **Fallback Models:** Qwen 3.5 Flash, Google Gemma 2.9B, NVIDIA Nemotron 3 Nano (free tier)
+- **Primary Model:** openrouter/hunter-alpha (FREE! 1M context)
+- **Fallback Models:** openrouter/nemotron-3-super-120b-a12b:free, skillboss (backup)
 
 ### Memory Search
 

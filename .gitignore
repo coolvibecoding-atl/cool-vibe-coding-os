@@ -10,9 +10,13 @@ ideas/
 infra/
 memory/
 node_modules/
-plans/
 scripts/
 *.log
 .env
 .env.*
 .DS_Store
+
+# Keep these
+!plans/
+!agents/
+!memory/

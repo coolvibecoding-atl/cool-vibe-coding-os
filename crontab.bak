@@ -1,0 +1,8 @@
+*/15 * * * * /Users/coolvibecoding/.nvm/versions/node/v22.22.0/bin/node /Users/coolvibecoding/.openclaw/workspace/scripts/heartbeat.js >> /tmp/heartbeat.log 2>&1
+0 7 * * * /Users/coolvibecoding/.nvm/versions/node/v22.22.0/bin/node /Users/coolvibecoding/.openclaw/workspace/scripts/morning-briefing-enhanced.js >> /tmp/morning.log 2>&1
+0 12 * * * /Users/coolvibecoding/.nvm/versions/node/v22.22.0/bin/node /Users/coolvibecoding/.openclaw/workspace/scripts/heartbeat.js >> /tmp/midday.log 2>&1
+0 18 * * * /Users/coolvibecoding/.nvm/versions/node/v22.22.0/bin/node /Users/coolvibecoding/.openclaw/workspace/scripts/daily-summary.js >> /tmp/evening.log 2>&1
+0 18 * * 0 /Users/coolvibecoding/.nvm/versions/node/v22.22.0/bin/node /Users/coolvibecoding/.openclaw/workspace/scripts/weekly-summary.js >> /tmp/weekly.log 2>&1
+0 4 * * * /Users/coolvibecoding/Desktop/agentic-devbox-setup/scripts/auto-update.sh >> /tmp/auto-update.log 2>&1
+30 4 * * * /Users/coolvibecoding/Desktop/agentic-devbox-setup/scripts/backup.sh >> /tmp/backup.log 2>&1
+0 9 * * 1 /Users/coolvibecoding/.nvm/versions/node/v22.22.0/bin/node /Users/coolvibecoding/.openclaw/workspace/content-agency/generate.js >> /tmp/content.log 2>&1

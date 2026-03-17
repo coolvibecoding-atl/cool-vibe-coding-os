@@ -1,0 +1,13 @@
+{
+  "today": "2026-03-16",
+  "startedAt": "2026-03-16T16:00:00.074Z",
+  "ok": true,
+  "telegramDelivered": true,
+  "lastError": null,
+  "lastErrorAt": null,
+  "updatedAt": "2026-03-16T16:00:03.350Z",
+  "completedAt": "2026-03-16T16:00:03.350Z",
+  "checkinPath": "/Users/coolvibecoding/Documents/Obsidian/Daily/2026-03-16-midday-checkin.md",
+  "telegramLastAttemptAt": "2026-03-16T16:00:03.350Z",
+  "runMode": "scheduled"
+}

@@ -117,7 +117,17 @@ function getMorningPipelineStatus() {
   if (!scriptExists) alerts.push('morning script missing');
   if (!cronScheduled && !launchLoaded) alerts.push('no active morning scheduler found');
   if (morningDeadlinePassed && !deliveredToday) alerts.push('morning briefing missing Telegram send after 8:00 AM');
-  if (state?.lastErrorAt && (!state.today || state.today === today) && !deliveredToday) alerts.push(`last morning error: ${state.lastError || 'unknown error'}`);
+  
+  // Only alert on CRITICAL errors, not source failures like Twitter auth
+  const lastError = state?.lastError || '';
+  const isNonCriticalError = lastError.toLowerCase().includes('twitter') || 
+                              lastError.toLowerCase().includes('reddit') ||
+                              lastError.toLowerCase().includes('rss') ||
+                              lastError.toLowerCase().includes('hacker news');
+  
+  if (state?.lastErrorAt && (!state.today || state.today === today) && !deliveredToday && !isNonCriticalError) {
+    alerts.push(`last morning error: ${state.lastError}`);
+  }
 
   return {
     status: alerts.length ? 'alert' : 'ok',
