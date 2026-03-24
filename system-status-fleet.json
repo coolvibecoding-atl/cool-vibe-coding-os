@@ -1,0 +1,40 @@
+{
+  "lastCheck": "2026-03-22T17:01:02.934Z",
+  "activeAgents": [
+    {
+      "id": "upwork-sniper",
+      "status": "booting",
+      "revenueGoal": "Fast Cash"
+    },
+    {
+      "id": "b2b-extractor",
+      "status": "booting",
+      "revenueGoal": "Volume Arbitrage"
+    },
+    {
+      "id": "web-extortionist",
+      "status": "offline",
+      "revenueGoal": "$1.5k High Ticket"
+    },
+    {
+      "id": "fiverr-audio",
+      "status": "offline",
+      "revenueGoal": "Service Arbitrage"
+    },
+    {
+      "id": "saas-flipper",
+      "status": "offline",
+      "revenueGoal": "$5k Exits"
+    },
+    {
+      "id": "seo-autopilot",
+      "status": "offline",
+      "revenueGoal": "$1k MRR"
+    },
+    {
+      "id": "digital-twin",
+      "status": "offline",
+      "revenueGoal": "$10k Enterprise"
+    }
+  ]
+}

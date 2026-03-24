@@ -20,3 +20,7 @@ scripts/
 !plans/
 !agents/
 !memory/
+.env*
+state/
+system-status.json
+*.log

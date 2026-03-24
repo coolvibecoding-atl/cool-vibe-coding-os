@@ -1,16 +1,16 @@
 {
-  "weekStart": "2026-03-15",
-  "today": "2026-03-15",
-  "startedAt": "2026-03-15T22:00:00.176Z",
+  "weekStart": "2026-03-22",
+  "today": "2026-03-22",
+  "startedAt": "2026-03-22T22:00:00.441Z",
   "ok": true,
   "telegramDelivered": true,
   "lastError": null,
   "lastErrorAt": null,
-  "updatedAt": "2026-03-15T22:00:00.956Z",
-  "completedAt": "2026-03-15T22:00:00.956Z",
-  "reviewPath": "/Users/coolvibecoding/Documents/Obsidian/Daily/2026-03-15-weekly-review.md",
+  "updatedAt": "2026-03-22T22:00:01.948Z",
+  "completedAt": "2026-03-22T22:00:01.948Z",
+  "reviewPath": "/Users/coolvibecoding/Documents/Obsidian/Daily/2026-03-22-weekly-review.md",
   "briefingsCount": 1,
   "commitsCount": 0,
-  "telegramLastAttemptAt": "2026-03-15T22:00:00.956Z",
+  "telegramLastAttemptAt": "2026-03-22T22:00:01.948Z",
   "runMode": "scheduled"
 }

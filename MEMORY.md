@@ -22,6 +22,9 @@
    - **Sources:** Awwwards, Figma Community, Behance, Dribbble, Mobbin, Landbook, Streamline, SiteInspire, Muzli, Pinterest
    - **Standard:** Every project pulls from these for stunning, unique frontend
 
+5. **Obsidian Context Mandate (NEW):**
+   - **Rule:** Whenever DaWizKid or Dot Com asks about prior discussions, ideas, or active contexts, Nova MUST use `exec` with `rg` or `find` to search the Obsidian Vault (`~/Documents/Obsidian/Cool Vibe Coding OS`) *in addition* to standard memory files. Obsidian is the true "Central Brain" and must always be referenced in chat.
+
 4. **The Mission Interrogation Rule:**
    - Before moving forward with any idea, Nova MUST ask clarifying questions to tighten up the mission.
 
@@ -128,6 +131,7 @@
 | AI Mixer Pro Dev | 3000 | ✅ Running (pid 79499) |
 
 ### Scheduled Cron Jobs
+| Night Shift Sentinel | 0 2 * * * | night-shift-agent.js |
 | Job | Schedule | Command |
 |-----|----------|---------|
 | Auto-update | 0 4 * * * | auto-update.sh |
@@ -155,8 +159,14 @@ When DaWizKid or Dot Com say they're "calling it quits", "laying it down", "goin
 - [ ] Inference.sh integration tests
 - [ ] Revenue-generating ideas research
 
-## Daily Reports Preference
+## Daily Reports Preference & Quality Standard
 - **DaWizKid explicitly wants daily reports remembered and not forgotten.**
+- **QUALITY STANDARD (NON-NEGOTIABLE):** No more half-baked summaries. 
+  - ALL stories and intel MUST be super detailed.
+  - Organization MUST be tight, properly formatted, and easy to read.
+  - Source links MUST be included for every story.
+  - No generic placeholder text (e.g., generator text instead of actual hashtags).
+- **DUAL-SYNC REQUIRED:** Every summary and brief MUST be updated and synced to BOTH Obsidian and Notion notes automatically.
 - Daily report cadence to preserve and mention when relevant:
   - Morning Briefing — 7:00 AM daily
   - Midday Check-in — 12:00 PM daily
@@ -325,3 +335,17 @@ node mega-intel-scraper.js
 10. **AgentShield** - $1-3M ARR - Agent security suite
 
 **Total Potential Revenue: $18M+ ARR**
+
+## Core Capabilities Update (2026-03-18)
+- **Agent Architect Pro:** Nova has digested the definitive 34-resource Agentic AI curriculum (Stanford, Anthropic, Google, ReAct, Reflexion, Toolformer). All future agent orchestration, sub-agent creation, and AI workflow design must utilize the Advanced Cognitive Architectures (Routing, Parallelization, Orchestrator-Worker, Evaluator-Optimizer) and MCP tool principles.
+
+## 🌙 Night Shift Sentinel (Active)
+- **Schedule:** Runs every night at 2:00 AM via launchd (com.coolvibecoding.night-shift).
+- **Function:** Drives Tandem Browser and SkillBoss APIs to deep-scrape Product Hunt, Hacker News, X/Twitter, YouTube, and Google Trends.
+- **Output:** Generates THREE (3) massive B2B SaaS/AI wrapper opportunities, validates them, and writes fully-formatted PRDs for each.
+- **Location:** Saves the final intel brief directly to Obsidian (`YYYY-MM-DD-Night-Shift-Brief.md`) so it is ready by morning.
+
+## The 15-Minute Detailed Heartbeat
+- DaWizKid mandates a hyper-detailed, system-wide status report every 15 minutes.
+- The script runs natively via `com.coolvibecoding.detailed-heartbeat.plist` every 900 seconds, checking all subagents (Gemini, Codex, etc.), project statuses, and returning actionable productivity suggestions.
+- When a heartbeat prompt triggers, read `/Users/coolvibecoding/.openclaw/workspace/system-status-detailed.json` and echo it directly back to the chat.

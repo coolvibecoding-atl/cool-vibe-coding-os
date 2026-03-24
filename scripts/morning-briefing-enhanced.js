@@ -49,12 +49,21 @@ const CONFIG = {
   rss: {
     enabled: true,
     feeds: [
-      'https://www.techmeme.com/feed.xml',
-      'https://feeds.feedburner.com/TechCrunch/',
+      // REMOVED: techmeme.com - it's a link aggregator, not a primary source
+      'https://techcrunch.com/feed/',
       'https://www.theverge.com/rss/index.xml',
-      'https://blog.google/technology/ai/rss/'
+      'https://blog.google/technology/ai/rss/',
+      'https://www.technologyreview.com/feed/'
     ]
   },
+  // Block known spam/SEO-bait domains that pollute RSS feeds
+  // Includes link aggregators (Techmeme) that don't link to original articles
+  spamDomains: [
+    'techncruncher.blogspot.com',
+    'techncruncher.blogspot.co.uk',
+    'techmeme.com',
+    'www.techmeme.com'
+  ],
   interests: {
     'AI news': ['ai', 'artificial intelligence', 'machine learning', 'llm', 'gpt', 'openai', 'anthropic', 'claude', 'gemini', 'deepseek', 'kimi', 'perplexity', 'mistral', 'qwen'],
     'Developer tools': ['developer', 'developer tools', 'programming', 'coding', 'software', 'api', 'github', 'git', 'vscode', 'ide', 'cli', 'framework', 'library', 'npm', 'pip', 'docker', 'kubernetes'],
@@ -310,46 +319,129 @@ function escapeTelegramMarkdown(text) {
   return String(text || '').replace(/([_\*\[\]\(\)~`>#+\-=|{}.!])/g, '\\$1');
 }
 
-async function fetchTwitterTimeline() {
-  if (!CONFIG.twitter.enabled) return [];
-
-  const xurlPath = findExecutable('xurl');
-  try {
-    log(`📥 Fetching Twitter timeline via ${xurlPath}...`);
-    const output = execSync(`${shellEscape(xurlPath)} timeline -n 100`, {
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-      env: {
-        ...process.env,
-        PATH: `${path.dirname(xurlPath)}:${process.env.PATH || '/usr/bin:/bin:/usr/local/bin'}`
-      }
+// SkillBoss API caller
+async function skillbossRun(modelId, inputs) {
+  const apiKey = process.env.SKILLBOSS_API_KEY;
+  if (!apiKey) {
+    throw new Error('SKILLBOSS_API_KEY not configured');
+  }
+  return new Promise((resolve, reject) => {
+    const payload = JSON.stringify({ model: modelId, inputs });
+    const req = https.request({
+      hostname: 'api.heybossai.com',
+      path: '/v1/run',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Length': Buffer.byteLength(payload)
+      },
+      timeout: 90000
+    }, (res) => {
+      let data = '';
+      res.on('data', chunk => { data += chunk; });
+      res.on('end', () => {
+        if (res.statusCode === 200) {
+          try { resolve(JSON.parse(data)); }
+          catch (e) { reject(e); }
+        } else { reject(new Error(`API error ${res.statusCode}: ${data.slice(0, 200)}`)); }
+      });
     });
-    const tweets = JSON.parse(output);
-    const scored = tweets
-      .map(tweet => {
-        const text = tweet.text || tweet.full_text || '';
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('Timeout')); });
+    req.write(payload);
+    req.end();
+  });
+}
+
+/**
+ * Dedicated Tech Twitter Pulse fetcher
+ * Uses Perplexity to search specifically for:
+ * - Tech/AI startup hashtags (#AI #MachineLearning #SaaS #IndieHackers #Startup)
+ * - Tech founder posts and discussions
+ * - Emerging AI tools and platforms
+ * - VC/funding news in tech
+ */
+async function fetchTechTwitterPulse() {
+  if (!CONFIG.twitter.enabled) return { items: [], hashtags: [] };
+
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+
+  // Targeted query for tech-focused Twitter content
+  const techQuery = `${today}. Search Twitter/X for: trending #AI #MachineLearning #SaaS #IndieHackers #Startups hashtags right now. What are tech founders, AI researchers, indie hackers discussing? Emerging AI tools, GPT alternatives, new developer tools launching. VC funding announcements, startup launches, Product Hunt trending. Tech twitter viral posts today. Include specific tweet examples with hashtag counts where available.`;
+
+  try {
+    log(`📥 Fetching Tech Twitter Pulse via SkillBoss Perplexity...`);
+    const result = await skillbossRun('perplexity/search', {
+      query: techQuery,
+      count: 10
+    });
+
+    // SkillBoss returns result.results as array of {date, last_updated, snippet, title, url}
+    const rawResults = result.results || [];
+    log(`📥 Perplexity returned ${rawResults.length} raw results`);
+
+    // Extract hashtags from results for the pulse section
+    const hashtagRegex = /#[A-Za-z][A-Za-z0-9_]*/g;
+    const hashtagCounts = {};
+    rawResults.forEach(r => {
+      const text = `${r.title || ''} ${r.snippet || ''}`;
+      const hashtags = text.match(hashtagRegex) || [];
+      hashtags.forEach(tag => {
+        const normalized = tag.toLowerCase();
+        hashtagCounts[normalized] = (hashtagCounts[normalized] || 0) + 1;
+      });
+    });
+
+    // Sort and take top hashtags (filter to tech-relevant ones)
+    const techHashtags = ['ai', 'machinelearning', 'saas', 'startup', 'indiehackers', 'startups', 'bootstrapped', 'buildinpublic', 'devtools', 'cloud', 'api', 'gpt', 'llm', 'opensource', 'webdev', 'programming', 'coding', 'tech', 'aito', 'tools', 'platform'];
+    const topHashtags = Object.entries(hashtagCounts)
+      .filter(([tag]) => {
+        const base = tag.replace(/^#/, '').toLowerCase();
+        return techHashtags.some(t => base.includes(t)) || /^(ai|ml|saas|llm|gpt|api)$/i.test(base);
+      })
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([tag, count]) => ({ tag: tag.startsWith('#') ? tag : `#${tag}`, count }));
+
+    const scored = rawResults
+      .map((r, idx) => {
+        const text = `${r.title || ''} ${r.snippet || ''}`.trim();
         const { score, matchedCategories } = scoreContent(text, CONFIG.interests);
         return {
-          source: 'Twitter',
-          ...tweet,
-          score,
+          source: 'Tech Twitter Pulse',
+          score: score + 5, // Boost perplexity results
           matchedCategories,
           text,
-          title: text,
-          id: tweet.id_str || tweet.id,
-          url: `https://x.com/${tweet.user?.screen_name || 'unknown'}/status/${tweet.id_str || tweet.id}`
+          title: (r.title || text).slice(0, 200),
+          url: r.url || `https://x.com/search?q=trending+tech`,
+          id: `techtwitter-${idx}`,
+          pubDate: r.date || null
         };
       })
-      .filter(item => item.score > 0)
+      .filter(item => item.score > 0 && !isSpamDomain(item.url))
       .sort((a, b) => b.score - a.score)
       .slice(0, CONFIG.twitter.topN);
-    log(`✅ Twitter: ${scored.length} relevant items`);
-    return scored;
+
+    log(`✅ Tech Twitter Pulse: ${scored.length} relevant items`);
+    if (scored.length > 0) {
+      scored.forEach(item => log(`   [${item.score}] ${item.title.slice(0, 80)} | ${item.url.slice(0, 60)}`));
+    }
+    if (topHashtags.length > 0) {
+      log(`   Top hashtags: ${topHashtags.map(h => `${h.tag} (${h.count})`).join(', ')}`);
+    }
+
+    return { items: scored, hashtags: topHashtags };
   } catch (err) {
-    // Log Twitter failures silently - don't spam Telegram for non-critical source failures
-    log(`⚠️ Twitter fetch failed (non-critical): ${err.message}`);
-    return [];
+    log(`⚠️ Tech Twitter Pulse fetch failed: ${err.message}`);
+    return { items: [], hashtags: [] };
   }
+}
+
+// Legacy wrapper for backward compatibility
+async function fetchTwitterTimeline() {
+  const result = await fetchTechTwitterPulse();
+  return result.items;
 }
 
 async function fetchRedditPosts() {
@@ -462,25 +554,82 @@ async function fetchRSSFeeds() {
   }
 }
 
+// Known spam/SEO-bait domains to exclude from all sources
+// Includes link aggregators (Techmeme) that don't link to original articles
+const SPAM_DOMAINS = new Set([
+  'techncruncher.blogspot.com',
+  'techncruncher.blogspot.co.uk',
+  'techmeme.com',
+  'www.techmeme.com'
+]);
+
+function isSpamDomain(url) {
+  if (!url) return false;
+  try {
+    const domain = new URL(url).hostname.toLowerCase();
+    return SPAM_DOMAINS.has(domain) || SPAM_DOMAINS.has(domain.replace(/^www\./, ''));
+  } catch { return false; }
+}
+
+// Parse various RSS date formats into a Date object
+function parseRSSDate(dateStr) {
+  if (!dateStr) return null;
+  const cleaned = dateStr.replace(/^\s+|\s+$/g, '');
+  // Try RFC 822 / RFC 2822 formats first (most common in RSS)
+  const d = new Date(cleaned);
+  if (!isNaN(d.getTime())) return d;
+  // Try ISO 8601
+  const isoMatch = cleaned.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    const d2 = new Date(cleaned);
+    if (!isNaN(d2.getTime())) return d2;
+  }
+  return null;
+}
+
 function parseRSS(xml) {
   const items = [];
   const itemRegex = /<item[^>]*>([\s\S]*?)<\/item>/gi;
   const titleRegex = /<title[^>]*><!\[CDATA\[([\s\S]*?)\]\]><\/title>|<title[^>]*>([^<]+)<\/title>/i;
-  const linkRegex = /<link[^>]*>([^<]+)<\/link>/i;
+  const linkRegex = /<link[^>]*>([^<]+)<\/link>|<link[^>]*href=["']([^"']+)["'][^>]*>/i;
   const descRegex = /<description[^>]*><!\[CDATA\[([\s\S]*?)\]\]><\/description>|<description[^>]*>([\s\S]*?)<\/description>/i;
+  const pubDateRegex = /<pubDate[^>]*>([^<]+)<\/pubDate>/i;
+  // Max age: 7 days for fresh content
+  const maxAgeMs = 7 * 24 * 60 * 60 * 1000;
+  const cutoff = Date.now() - maxAgeMs;
   let match;
+  let globalDateMatch = pubDateRegex.exec(xml);
+  let globalDate = globalDateMatch ? parseRSSDate(globalDateMatch[1]) : null;
+
   while ((match = itemRegex.exec(xml)) !== null) {
     const itemXml = match[1];
     const titleMatch = titleRegex.exec(itemXml);
     const linkMatch = linkRegex.exec(itemXml);
     const descMatch = descRegex.exec(itemXml);
+    const itemDateMatch = pubDateRegex.exec(itemXml);
+
     const title = (titleMatch?.[1] || titleMatch?.[2] || '').replace(/<[^>]+>/g, '').trim();
+    const link = (linkMatch?.[1] || linkMatch?.[2] || '').trim();
     const text = (descMatch?.[1] || descMatch?.[2] || '').replace(/<[^>]+>/g, '').trim();
-    const link = (linkMatch?.[1] || '').trim();
+
     if (!title || !link) continue;
+
+    // Block spam domains
+    if (isSpamDomain(link)) {
+      log(`  🚫 SPAM blocked: ${link.slice(0, 80)}`);
+      continue;
+    }
+
+    // Parse item-level pubDate; fall back to feed-level date if missing
+    const itemDate = itemDateMatch ? parseRSSDate(itemDateMatch[1]) : globalDate;
+    if (itemDate && itemDate.getTime() < cutoff) {
+      log(`  🗓️ Old item skipped (${itemDate.toISOString().slice(0,10)}): ${title.slice(0, 60)}`);
+      continue;
+    }
+
     const { score, matchedCategories } = scoreContent(`${title} ${text}`, CONFIG.interests);
     if (score > 0) {
-      items.push({ source: 'RSS', title, text, score, matchedCategories, url: link });
+      items.push({ source: 'RSS', title, text, score, matchedCategories, url: link, pubDate: itemDate ? itemDate.toISOString() : null });
     }
   }
   return items;
@@ -590,12 +739,15 @@ async function generateBriefing({ force = false } = {}) {
 
   log('🚀 Starting enhanced morning briefing...');
 
-  const [tweets, redditPosts, hnStories, rssItems] = await Promise.all([
-    fetchTwitterTimeline(),
+  const [twitterPulse, redditPosts, hnStories, rssItems] = await Promise.all([
+    fetchTechTwitterPulse(),
     fetchRedditPosts(),
     fetchHackerNews(),
     fetchRSSFeeds()
   ]);
+
+  const tweets = twitterPulse.items;
+  const techHashtags = twitterPulse.hashtags;
 
   const topItems = dedupeByUrl([...tweets, ...redditPosts, ...hnStories, ...rssItems])
     .sort((a, b) => b.score - a.score)
@@ -635,6 +787,17 @@ async function generateBriefing({ force = false } = {}) {
     });
   }
 
+  // Tech Twitter Pulse section with hashtags
+  if (techHashtags.length > 0) {
+    markdown += '## Tech Twitter Pulse\n\n';
+    markdown += '_Targeted tech/AI/startup trends from Twitter/X_\n\n';
+    markdown += '**Trending Hashtags:**\n';
+    techHashtags.forEach(h => {
+      markdown += `- ${h.tag} (${h.count}+ mentions)\n`;
+    });
+    markdown += '\n';
+  }
+
   markdown += '## Quick Hits\n\n';
   const quickHits = topItems.filter(item => `${item.title || item.text || ''}`.length < 150).slice(0, 5);
   if (quickHits.length === 0) {
@@ -664,12 +827,24 @@ async function generateBriefing({ force = false } = {}) {
   const topForTelegram = topItems.slice(0, 12);
   const telegramLines = [
     `🌅 <b>Morning Briefing - ${dateStr}</b>`,
-    '',
-    `📰 <b>${topItems.length} Stories</b> from ${Object.keys(bySource).length} sources`,
-    '',
-    '<b>━━━━ TOP STORIES ━━━━</b>',
     ''
   ];
+
+  // Tech Twitter Pulse section
+  if (techHashtags.length > 0 || tweets.length > 0) {
+    telegramLines.push('🐦 <b>Tech Twitter Pulse</b>');
+    telegramLines.push('<i>Targeted #AI #Startups #SaaS trends</i>');
+    telegramLines.push('');
+    if (techHashtags.length > 0) {
+      telegramLines.push('<b>Trending:</b> ' + techHashtags.map(h => `${h.tag} (${h.count}+)`).join(' • '));
+      telegramLines.push('');
+    }
+  }
+
+  telegramLines.push(`📰 <b>${topItems.length} Stories</b> from ${Object.keys(bySource).length} sources`);
+  telegramLines.push('');
+  telegramLines.push('<b>━━━━ TOP STORIES ━━━━</b>');
+  telegramLines.push('');
 
   topForTelegram.forEach((item, idx) => {
     const title = (item.title || item.text || 'Untitled').replace(/</g, '&lt;').replace(/>/g, '&gt;').slice(0, 80);
@@ -736,3 +911,4 @@ if (require.main === module) {
 }
 
 module.exports = { generateBriefing, STATE_FILE, ENV_FILE };
+// test
